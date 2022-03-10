@@ -89,6 +89,9 @@ main PROC
   push	sMax
   push	OFFSET sLength
   call	ReadVal
+  call	CrLf
+  mov	EAX, newInt
+  call	WriteInt
   
   
 
@@ -148,9 +151,10 @@ _start_loop:
   mul	EBX
   add	EAX, [EDI]
   mov	[EDI], EAX
+ _continue:
   dec	ECX
   cmp	ECX, 0
-  jle	_done
+  je	_switch_sign
   mov	EAX, multiply
   mov	EBX, 10
   mul	EBX
@@ -159,20 +163,29 @@ _start_loop:
 
 
 _check_sign:
-  cmp	ESI, 0
+  cmp	ECX, 1
   jne	_invalid
   cmp	AL, 45
   jne	_check_pos
   mov	signFlag, 1
+  jmp	_continue
 
 _check_pos:
   cmp	AL, 43
   jne	_invalid
   mov	signFlag, 0
+  jmp	_continue
 
 _invalid:
   mGetString	[EBP + 28], [EBP + 16], [EBP + 12], [EBP + 8]
   jmp	_start_over
+
+_switch_sign:
+  cmp	signFlag, 0
+  je	_done
+  mov	EAX, [EDI]
+  neg	EAX
+  mov	[EDI], EAX
 
 _done:
 
