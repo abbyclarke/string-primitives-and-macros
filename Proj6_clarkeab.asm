@@ -33,7 +33,7 @@ mGetString	MACRO prompt, userString, size, bytesRead
   mov	EDX, userString
   call	ReadString
   mov	EDI, bytesRead
-  mov	[EDI], ECX
+  mov	[EDI], EAX
 
   pop	EDI
   pop	EDX
@@ -76,6 +76,7 @@ errorMsg	BYTE	"ERROR: You did not enter a signed number of your number was too b
 
 
 
+
 ; (insert variable definitions here)
 
 .code
@@ -87,6 +88,9 @@ main PROC
   push	OFFSET string1
   push	sMax
   push	OFFSET sLength
+  call	ReadVal
+  
+  
 
 	Invoke ExitProcess,0	; exit to operating system
 main ENDP
@@ -98,7 +102,7 @@ main ENDP
 ; description: 
 ;
 ; preconditions: ebp+8 = Offset sLength, ebp+12 = sMax, ebp+16 = offset string1, ebp+20=offset prompt1, ebp+24=offset newInt,
-; ebp+28= offset errorMsg, ebp+32=
+; ebp+28= offset errorMsg
 ;
 ; postconditions: 
 ;
@@ -108,19 +112,28 @@ main ENDP
 ; ---------------------------------------------------------------
 ReadVal PROC
   LOCAL	signFlag: DWORD, multiply: DWORD			; 0 for positive, 1 for negative
+  push	EAX
+  push	EBX
+  push	ECX
+  push	EDX
+  push	EDI
+  push	ESI
   mov	signFlag, 0
   mov	multiply, 1									; will increase by 10s
   mGetString	[EBP + 20], [EBP + 16], [EBP + 12], [EBP + 8]
   
 _start_over:  
-  mov	ECX, [EBP + 8]
+  mov	EDX, [EBP + 8]
+  mov	ECX, [EDX]
   mov	ESI, [EBP + 16]
   add	ESI, ECX
   dec	ESI
   mov	EDI, [EBP + 24]
+  mov	EAX, 0
+  mov	[EDI], EAX
   mov	EBX, multiply
 
-_start:
+_start_loop:
   STD
   LODSB
   cmp	AL, 48
@@ -128,9 +141,21 @@ _start:
   cmp	AL, 57
   jg	_invalid
   sub	AL, 48
+  mov	BL, AL
+  mov	EAX, 0			;set EAX to 0 to prepare for moving previous contents of AL into EAX to multiply
+  movsx	EAX, BL
   mov	EBX, multiply		; multiply by decimal place one, ten, hundred, etc
   mul	EBX
-  mov	[EDI], EAX				
+  add	EAX, [EDI]
+  mov	[EDI], EAX
+  dec	ECX
+  cmp	ECX, 0
+  jle	_done
+  mov	EAX, multiply
+  mov	EBX, 10
+  mul	EBX
+  mov	multiply, EAX
+  jmp	_start_loop
 
 
 _check_sign:
@@ -149,10 +174,15 @@ _invalid:
   mGetString	[EBP + 28], [EBP + 16], [EBP + 12], [EBP + 8]
   jmp	_start_over
 
+_done:
 
-
-  
-  ret
+  pop	ESI
+  pop	EDI
+  pop	EDX
+  pop	ECX
+  pop	EBX
+  pop	EAX
+  ret	24
 ReadVal ENDP
 
 ; ------------------------------------------------------------
