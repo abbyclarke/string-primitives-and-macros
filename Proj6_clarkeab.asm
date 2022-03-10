@@ -67,8 +67,8 @@ ENDM
 
 .data
 prompt1		BYTE	"Please enter a signed number: ", 0
-string1		BYTE	11 DUP(?)
-sMax		DWORD	11
+string1		BYTE	32 DUP(?)
+sMax		DWORD	32
 sLength		DWORD	?
 newInt		SDWORD	?
 errorMsg	BYTE	"ERROR: You did not enter a signed number of your number was too big.", 13,10
@@ -114,7 +114,7 @@ main ENDP
 ; returns: 
 ; ---------------------------------------------------------------
 ReadVal PROC
-  LOCAL	signFlag: DWORD, multiply: DWORD			; 0 for positive, 1 for negative
+  LOCAL	signFlag: DWORD, multiply: DWORD			; signFlag: 0 for positive, 1 for negative
   push	EAX
   push	EBX
   push	ECX
@@ -126,6 +126,8 @@ ReadVal PROC
   mGetString	[EBP + 20], [EBP + 16], [EBP + 12], [EBP + 8]
   
 _start_over:  
+  mov	multiply, 1
+  mov	signFlag, 0
   mov	EDX, [EBP + 8]
   mov	ECX, [EDX]
   mov	ESI, [EBP + 16]
@@ -149,7 +151,9 @@ _start_loop:
   movsx	EAX, BL
   mov	EBX, multiply		; multiply by decimal place one, ten, hundred, etc
   mul	EBX
+  jc	_invalid			; check if carry flag was set
   add	EAX, [EDI]
+  js	_invalid			; check if overflow flag was set
   mov	[EDI], EAX
  _continue:
   dec	ECX
@@ -177,6 +181,8 @@ _check_pos:
   jmp	_continue
 
 _invalid:
+  cmp	EAX, -2147483648			; check for edge case- this number is valid
+  je	_edge_case
   mGetString	[EBP + 28], [EBP + 16], [EBP + 12], [EBP + 8]
   jmp	_start_over
 
@@ -185,6 +191,10 @@ _switch_sign:
   je	_done
   mov	EAX, [EDI]
   neg	EAX
+  mov	[EDI], EAX
+  jmp	_done
+  
+_edge_case:
   mov	[EDI], EAX
 
 _done:
