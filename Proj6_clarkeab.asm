@@ -104,8 +104,8 @@ main PROC
 ; -------------------------------------------------------------------------
   
 ;title and instructions
-  mov	EDX, OFFSET titleinstr
-  call	WriteString
+  mDisplayString	OFFSET titleinstr
+  
 
 ;prompt user for 10 numbers  
   mov	counter, 10
@@ -129,8 +129,8 @@ _get10Nums:
 
 
 ;display the integers  
-  mov	EDX, OFFSET yourNums
-  call	WriteString
+  mDisplayString	OFFSET yourNums
+ 
 ;convert each int in listNums to ascii string
   mov	ESI, OFFSET listNums
   mov	counter, 10
@@ -165,8 +165,8 @@ _sumLoop:
 
 
 ;display the sum
-  mov	EDX, OFFSET yourSum
-  call	WriteString
+  mDisplayString	OFFSET yourSum
+  
   push	OFFSET string2
   push	numSum
   call	WriteVal
@@ -181,8 +181,8 @@ _sumLoop:
   mov	numAvg, EAX
 
 ;display the average
-  mov	EDX, OFFSET yourAvg
-  call	WriteString
+  mDisplayString	OFFSET yourAvg
+  
   push	OFFSET string2
   push	numAvg
   call	WriteVal
@@ -190,8 +190,8 @@ _sumLoop:
   call	CrLf
 
 ;goodbye
-  mov	EDX, OFFSET goodBye
-  call	WriteString
+  mDisplayString	OFFSET goodBye
+  
 
 	Invoke ExitProcess,0	; exit to operating system
 main ENDP
