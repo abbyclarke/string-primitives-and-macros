@@ -67,18 +67,20 @@ ENDM
 
 .data
 prompt1		BYTE	"Please enter a signed number: ", 0
-string1		BYTE	32 DUP(?)
-string2		BYTE	32 DUP(?)
-listNums	BYTE	32 DUP(?)
+string1		BYTE	200 DUP(?)
+string2		BYTE	200 DUP(?)
+listNums	SBYTE	200 DUP(?)
 sMax		DWORD	32
 sLength		DWORD	?
 newInt		SDWORD	?
-errorMsg	BYTE	"ERROR: You did not enter a signed number of your number was too big.", 13,10
+errorMsg	BYTE	"ERROR: You did not enter a signed number or your number was too big.", 13,10
 			BYTE	"Please try again: ", 0
 counter		DWORD	?
 yourNums	BYTE	"You entered the following numbers: ",13,10,0
 yourSum		BYTE	"The sum of these numbers is: ",0
+yourAvg		BYTE	"The truncated average is: ",0
 numSum		SDWORD	?
+numAvg		SDWORD  ?
 
 
 
@@ -87,7 +89,7 @@ numSum		SDWORD	?
 .code
 main PROC
   
-  mov	counter, 4
+  mov	counter, 10
   mov	EDI, OFFSET listNums
 _get10Nums:
   push	OFFSET errorMsg
@@ -112,7 +114,7 @@ _get10Nums:
   call	WriteString
 ;convert each int in listNums to ascii string
   mov	ESI, OFFSET listNums
-  mov	counter, 4
+  mov	counter, 10
 _display10Nums:
   mov	EAX, [ESI]
   mov	newInt, EAX
@@ -131,7 +133,7 @@ _display10Nums:
 ;calculate the sum
   mov	ESI, OFFSET listNums
   mov	EDI, OFFSET numSum
-  mov	counter, 4
+  mov	counter, 9
   mov	EAX, [ESI]
 _sumLoop:
   add	ESI, 4
@@ -151,8 +153,21 @@ _sumLoop:
   call	WriteVal
   call	CrLf
 
-  
-  
+
+;calculate the average
+  mov	EAX, numSum
+  cdq
+  mov	EBX, 10
+  idiv	EBX
+  mov	numAvg, EAX
+
+;display the average
+  mov	EDX, OFFSET yourAvg
+  call	WriteString
+  push	OFFSET string2
+  push	numAvg
+  call	WriteVal
+  call	CrLf
   
   
 
