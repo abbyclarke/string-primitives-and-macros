@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 14.29.30138.0	    03/09/22 23:00:11
+Microsoft (R) Macro Assembler Version 14.29.30138.0	    03/10/22 21:47:20
 5String Primitives and Macros     (Proj6_clarkeab.asm	     Page 1 - 1
 
 
@@ -97,10 +97,16 @@ Microsoft (R) Macro Assembler Version 14.29.30138.0	    03/09/22 23:00:11
  0000001F  00000020 [		string1		BYTE	32 DUP(?)
 	    00
 	   ]
- 0000003F 00000020		sMax		DWORD	32
- 00000043 00000000		sLength		DWORD	?
- 00000047 00000000		newInt		SDWORD	?
- 0000004B 45 52 52 4F 52	errorMsg	BYTE	"ERROR: You did not enter a signed number of your number was too big.", 13,10
+ 0000003F  00000020 [		string2		BYTE	32 DUP(?)
+	    00
+	   ]
+ 0000005F  00000020 [		string3		BYTE	32 DUP(?)
+	    00
+	   ]
+ 0000007F 00000020		sMax		DWORD	32
+ 00000083 00000000		sLength		DWORD	?
+ 00000087 00000000		newInt		SDWORD	?
+ 0000008B 45 52 52 4F 52	errorMsg	BYTE	"ERROR: You did not enter a signed number of your number was too big.", 13,10
 	   3A 20 59 6F 75
 	   20 64 69 64 20
 	   6E 6F 74 20 65
@@ -114,7 +120,7 @@ Microsoft (R) Macro Assembler Version 14.29.30138.0	    03/09/22 23:00:11
 	   20 77 61 73 20
 	   74 6F 6F 20 62
 	   69 67 2E 0D 0A
- 00000091  50 6C 65 61 73				BYTE	"Please try again: ", 0
+ 000000D1  50 6C 65 61 73				BYTE	"Please try again: ", 0
 	   65 20 74 72 79
 	   20 61 67 61 69
 	   6E 3A 20 00
@@ -127,198 +133,276 @@ Microsoft (R) Macro Assembler Version 14.29.30138.0	    03/09/22 23:00:11
  00000000			.code
  00000000			main PROC
 				  
- 00000000  68 0000004B R	  push	OFFSET errorMsg
- 00000005  68 00000047 R	  push	OFFSET newInt
+ 00000000  68 0000008B R	  push	OFFSET errorMsg
+ 00000005  68 00000087 R	  push	OFFSET newInt
  0000000A  68 00000000 R	  push	OFFSET prompt1
  0000000F  68 0000001F R	  push	OFFSET string1
- 00000014  FF 35 0000003F R	  push	sMax
- 0000001A  68 00000043 R	  push	OFFSET sLength
- 0000001F  E8 00000016		  call	ReadVal
+ 00000014  FF 35 0000007F R	  push	sMax
+ 0000001A  68 00000083 R	  push	OFFSET sLength
+ 0000001F  E8 0000004D		  call	ReadVal
  00000024  E8 00000000 E	  call	CrLf
- 00000029  A1 00000047 R	  mov	EAX, newInt
+ 00000029  A1 00000087 R	  mov	EAX, newInt
  0000002E  E8 00000000 E	  call	WriteInt
+ 00000033  E8 00000000 E	  call	CrLf
+
+ 00000038  68 0000005F R	  push	OFFSET string3
+ 0000003D  68 0000003F R	  push	OFFSET string2
+ 00000042  68 00000087 R	  push	OFFSET newInt
+ 00000047  E8 00000122		  call	WriteVal
+ 0000004C  BA 0000003F R	  mov	EDX, OFFSET string2
+ 00000051  E8 00000000 E	  call	WriteString
+ 00000056  E8 00000000 E	  call	CrLf
+ 0000005B  BA 0000005F R	  mov	EDX, OFFSET string3
+ 00000060  E8 00000000 E	  call	WriteString
+ 00000065  E8 00000000 E	  call	CrLf
 				  
 				  
 
 					Invoke ExitProcess,0	; exit to operating system
- 00000033  6A 00	   *	    push   +000000000h
- 00000035  E8 00000000 E   *	    call   ExitProcess
- 0000003A			main ENDP
+ 0000006A  6A 00	   *	    push   +000000000h
+ 0000006C  E8 00000000 E   *	    call   ExitProcess
+ 00000071			main ENDP
 
 
 				; ------------------------------------------------------------
 				; name: ReadVal
 
-				; description: 
+				; description: ReadVal uses mGetString maco to get user input in form of a string of digits. It converts the string of 
+				; ascii digits to its numeric value representation in a SDOWRD. It validates the user's input is a valid number (no letters, symbols)
+				; and ensures it fits in an SDWORD without overflow.
 				;
 				; preconditions: ebp+8 = Offset sLength, ebp+12 = sMax, ebp+16 = offset string1, ebp+20=offset prompt1, ebp+24=offset newInt,
 				; ebp+28= offset errorMsg
 				;
-				; postconditions: 
+				; postconditions: newInt value changed. registers preserved.
 				;
-				; receives: 
+				; receives: (listed above) offset sLength, sMax, offset string1, offset prompt1, offset newInt, offset errorMsg
 				;
-				; returns: 
+				; returns: converted value in SDWORD newInt
 				; ---------------------------------------------------------------
- 0000003A			ReadVal PROC
+ 00000071			ReadVal PROC
 				  LOCAL	signFlag: DWORD, multiply: DWORD			; signFlag: 0 for positive, 1 for negative
- 0000003A  55		   *	    push   ebp
- 0000003B  8B EC	   *	    mov    ebp, esp
- 0000003D  83 C4 F8	   *	    add    esp, 0FFFFFFF8h
- 00000040  50			  push	EAX
- 00000041  53			  push	EBX
- 00000042  51			  push	ECX
- 00000043  52			  push	EDX
- 00000044  57			  push	EDI
- 00000045  56			  push	ESI
- 00000046  C7 45 FC		  mov	signFlag, 0
+ 00000071  55		   *	    push   ebp
+ 00000072  8B EC	   *	    mov    ebp, esp
+ 00000074  83 C4 F8	   *	    add    esp, 0FFFFFFF8h
+ 00000077  50			  push	EAX
+ 00000078  53			  push	EBX
+ 00000079  51			  push	ECX
+ 0000007A  52			  push	EDX
+ 0000007B  57			  push	EDI
+ 0000007C  56			  push	ESI
+ 0000007D  C7 45 FC		  mov	signFlag, 0
 	   00000000
- 0000004D  C7 45 F8		  mov	multiply, 1									; will increase by 10s
+ 00000084  C7 45 F8		  mov	multiply, 1									; will increase by 10s
 	   00000001
 				  mGetString	[EBP + 20], [EBP + 16], [EBP + 12], [EBP + 8]
- 00000054  50		     1	  push	EAX
- 00000055  51		     1	  push	ECX
- 00000056  52		     1	  push	EDX
- 00000057  57		     1	  push	EDI
- 00000058  8B 55 14	     1	  mov	EDX, [EBP + 20]
- 0000005B  E8 00000000 E     1	  call	WriteString
- 00000060  8B 4D 0C	     1	  mov	ECX, [EBP + 12]
- 00000063  8B 55 10	     1	  mov	EDX, [EBP + 16]
- 00000066  E8 00000000 E     1	  call	ReadString
- 0000006B  8B 7D 08	     1	  mov	EDI, [EBP + 8]
- 0000006E  89 07	     1	  mov	[EDI], EAX
- 00000070  5F		     1	  pop	EDI
- 00000071  5A		     1	  pop	EDX
- 00000072  59		     1	  pop	ECX
- 00000073  58		     1	  pop	EAX
+ 0000008B  50		     1	  push	EAX
+ 0000008C  51		     1	  push	ECX
+ 0000008D  52		     1	  push	EDX
+ 0000008E  57		     1	  push	EDI
+ 0000008F  8B 55 14	     1	  mov	EDX, [EBP + 20]
+ 00000092  E8 00000000 E     1	  call	WriteString
+ 00000097  8B 4D 0C	     1	  mov	ECX, [EBP + 12]
+ 0000009A  8B 55 10	     1	  mov	EDX, [EBP + 16]
+ 0000009D  E8 00000000 E     1	  call	ReadString
+ 000000A2  8B 7D 08	     1	  mov	EDI, [EBP + 8]
+ 000000A5  89 07	     1	  mov	[EDI], EAX
+ 000000A7  5F		     1	  pop	EDI
+ 000000A8  5A		     1	  pop	EDX
+ 000000A9  59		     1	  pop	ECX
+ 000000AA  58		     1	  pop	EAX
 				  
- 00000074			_start_over:  
- 00000074  C7 45 F8		  mov	multiply, 1
+ 000000AB			_start_over:  
+ 000000AB  C7 45 F8		  mov	multiply, 1
 	   00000001
- 0000007B  C7 45 FC		  mov	signFlag, 0
+ 000000B2  C7 45 FC		  mov	signFlag, 0
 	   00000000
- 00000082  8B 55 08		  mov	EDX, [EBP + 8]
- 00000085  8B 0A		  mov	ECX, [EDX]
- 00000087  8B 75 10		  mov	ESI, [EBP + 16]
- 0000008A  03 F1		  add	ESI, ECX
- 0000008C  4E			  dec	ESI
- 0000008D  8B 7D 18		  mov	EDI, [EBP + 24]
- 00000090  B8 00000000		  mov	EAX, 0
- 00000095  89 07		  mov	[EDI], EAX
- 00000097  8B 5D F8		  mov	EBX, multiply
+ 000000B9  8B 55 08		  mov	EDX, [EBP + 8]
+ 000000BC  8B 0A		  mov	ECX, [EDX]
+ 000000BE  8B 75 10		  mov	ESI, [EBP + 16]
+ 000000C1  03 F1		  add	ESI, ECX
+ 000000C3  4E			  dec	ESI
+ 000000C4  8B 7D 18		  mov	EDI, [EBP + 24]
+ 000000C7  B8 00000000		  mov	EAX, 0
+ 000000CC  89 07		  mov	[EDI], EAX
+ 000000CE  8B 5D F8		  mov	EBX, multiply
 
- 0000009A			_start_loop:
- 0000009A  FD			  STD
- 0000009B  AC			  LODSB
- 0000009C  3C 30		  cmp	AL, 48
- 0000009E  7C 32		  jl	_check_sign
- 000000A0  3C 39		  cmp	AL, 57
- 000000A2  7F 4D		  jg	_invalid
- 000000A4  2C 30		  sub	AL, 48
- 000000A6  8A D8		  mov	BL, AL
- 000000A8  B8 00000000		  mov	EAX, 0			;set EAX to 0 to prepare for moving previous contents of AL into EAX to multiply
- 000000AD  0F BE C3		  movsx	EAX, BL
- 000000B0  8B 5D F8		  mov	EBX, multiply		; multiply by decimal place one, ten, hundred, etc
- 000000B3  F7 E3		  mul	EBX
- 000000B5  72 3A		  jc	_invalid			; check if carry flag was set
- 000000B7  03 07		  add	EAX, [EDI]
- 000000B9  78 36		  js	_invalid			; check if overflow flag was set
- 000000BB  89 07		  mov	[EDI], EAX
- 000000BD			 _continue:
- 000000BD  49			  dec	ECX
- 000000BE  83 F9 00		  cmp	ECX, 0
- 000000C1  74 5A		  je	_switch_sign
- 000000C3  8B 45 F8		  mov	EAX, multiply
- 000000C6  BB 0000000A		  mov	EBX, 10
- 000000CB  F7 E3		  mul	EBX
- 000000CD  89 45 F8		  mov	multiply, EAX
- 000000D0  EB C8		  jmp	_start_loop
+ 000000D1			_start_loop:
+ 000000D1  FD			  STD
+ 000000D2  AC			  LODSB
+ 000000D3  3C 30		  cmp	AL, 48
+ 000000D5  7C 32		  jl	_check_sign
+ 000000D7  3C 39		  cmp	AL, 57
+ 000000D9  7F 4D		  jg	_invalid
+ 000000DB  2C 30		  sub	AL, 48
+ 000000DD  8A D8		  mov	BL, AL
+ 000000DF  B8 00000000		  mov	EAX, 0			;set EAX to 0 to prepare for moving previous contents of AL into EAX to multiply
+ 000000E4  0F BE C3		  movsx	EAX, BL
+ 000000E7  8B 5D F8		  mov	EBX, multiply		; multiply by decimal place one, ten, hundred, etc
+ 000000EA  F7 E3		  mul	EBX
+ 000000EC  72 3A		  jc	_invalid			; check if carry flag was set
+ 000000EE  03 07		  add	EAX, [EDI]
+ 000000F0  78 36		  js	_invalid			; check if overflow flag was set
+ 000000F2  89 07		  mov	[EDI], EAX
+ 000000F4			 _continue:
+ 000000F4  49			  dec	ECX
+ 000000F5  83 F9 00		  cmp	ECX, 0
+ 000000F8  74 5A		  je	_switch_sign
+ 000000FA  8B 45 F8		  mov	EAX, multiply
+ 000000FD  BB 0000000A		  mov	EBX, 10
+ 00000102  F7 E3		  mul	EBX
+ 00000104  89 45 F8		  mov	multiply, EAX
+ 00000107  EB C8		  jmp	_start_loop
 
 
- 000000D2			_check_sign:
- 000000D2  83 F9 01		  cmp	ECX, 1
- 000000D5  75 1A		  jne	_invalid
- 000000D7  3C 2D		  cmp	AL, 45
- 000000D9  75 09		  jne	_check_pos
- 000000DB  C7 45 FC		  mov	signFlag, 1
+ 00000109			_check_sign:
+ 00000109  83 F9 01		  cmp	ECX, 1
+ 0000010C  75 1A		  jne	_invalid
+ 0000010E  3C 2D		  cmp	AL, 45
+ 00000110  75 09		  jne	_check_pos
+ 00000112  C7 45 FC		  mov	signFlag, 1
 	   00000001
- 000000E2  EB D9		  jmp	_continue
+ 00000119  EB D9		  jmp	_continue
 
- 000000E4			_check_pos:
- 000000E4  3C 2B		  cmp	AL, 43
- 000000E6  75 09		  jne	_invalid
- 000000E8  C7 45 FC		  mov	signFlag, 0
+ 0000011B			_check_pos:
+ 0000011B  3C 2B		  cmp	AL, 43
+ 0000011D  75 09		  jne	_invalid
+ 0000011F  C7 45 FC		  mov	signFlag, 0
 	   00000000
- 000000EF  EB CC		  jmp	_continue
+ 00000126  EB CC		  jmp	_continue
 
- 000000F1			_invalid:
- 000000F1  3D 80000000		  cmp	EAX, -2147483648
- 000000F6  74 33		  je	_edge_case
+ 00000128			_invalid:
+ 00000128  3D 80000000		  cmp	EAX, -2147483648			; check for edge case- this number is valid
+ 0000012D  74 33		  je	_edge_case
 				  mGetString	[EBP + 28], [EBP + 16], [EBP + 12], [EBP + 8]
- 000000F8  50		     1	  push	EAX
- 000000F9  51		     1	  push	ECX
- 000000FA  52		     1	  push	EDX
- 000000FB  57		     1	  push	EDI
- 000000FC  8B 55 1C	     1	  mov	EDX, [EBP + 28]
- 000000FF  E8 00000000 E     1	  call	WriteString
- 00000104  8B 4D 0C	     1	  mov	ECX, [EBP + 12]
- 00000107  8B 55 10	     1	  mov	EDX, [EBP + 16]
- 0000010A  E8 00000000 E     1	  call	ReadString
- 0000010F  8B 7D 08	     1	  mov	EDI, [EBP + 8]
- 00000112  89 07	     1	  mov	[EDI], EAX
- 00000114  5F		     1	  pop	EDI
- 00000115  5A		     1	  pop	EDX
- 00000116  59		     1	  pop	ECX
- 00000117  58		     1	  pop	EAX
- 00000118  E9 FFFFFF57		  jmp	_start_over
+ 0000012F  50		     1	  push	EAX
+ 00000130  51		     1	  push	ECX
+ 00000131  52		     1	  push	EDX
+ 00000132  57		     1	  push	EDI
+ 00000133  8B 55 1C	     1	  mov	EDX, [EBP + 28]
+ 00000136  E8 00000000 E     1	  call	WriteString
+ 0000013B  8B 4D 0C	     1	  mov	ECX, [EBP + 12]
+ 0000013E  8B 55 10	     1	  mov	EDX, [EBP + 16]
+ 00000141  E8 00000000 E     1	  call	ReadString
+ 00000146  8B 7D 08	     1	  mov	EDI, [EBP + 8]
+ 00000149  89 07	     1	  mov	[EDI], EAX
+ 0000014B  5F		     1	  pop	EDI
+ 0000014C  5A		     1	  pop	EDX
+ 0000014D  59		     1	  pop	ECX
+ 0000014E  58		     1	  pop	EAX
+ 0000014F  E9 FFFFFF57		  jmp	_start_over
 
- 0000011D			_switch_sign:
- 0000011D  83 7D FC 00		  cmp	signFlag, 0
- 00000121  74 0A		  je	_done
- 00000123  8B 07		  mov	EAX, [EDI]
- 00000125  F7 D8		  neg	EAX
- 00000127  89 07		  mov	[EDI], EAX
- 00000129  EB 02		  jmp	_done
+ 00000154			_switch_sign:
+ 00000154  83 7D FC 00		  cmp	signFlag, 0
+ 00000158  74 0A		  je	_done
+ 0000015A  8B 07		  mov	EAX, [EDI]
+ 0000015C  F7 D8		  neg	EAX
+ 0000015E  89 07		  mov	[EDI], EAX
+ 00000160  EB 02		  jmp	_done
 				  
- 0000012B			_edge_case:
- 0000012B  89 07		  mov	[EDI], EAX
+ 00000162			_edge_case:
+ 00000162  89 07		  mov	[EDI], EAX
 
- 0000012D			_done:
+ 00000164			_done:
 
- 0000012D  5E			  pop	ESI
- 0000012E  5F			  pop	EDI
- 0000012F  5A			  pop	EDX
- 00000130  59			  pop	ECX
- 00000131  5B			  pop	EBX
- 00000132  58			  pop	EAX
- 00000133  C9		   *	    leave  
- 00000134  C2 0018		  ret	24
- 00000137			ReadVal ENDP
+ 00000164  5E			  pop	ESI
+ 00000165  5F			  pop	EDI
+ 00000166  5A			  pop	EDX
+ 00000167  59			  pop	ECX
+ 00000168  5B			  pop	EBX
+ 00000169  58			  pop	EAX
+ 0000016A  C9		   *	    leave  
+ 0000016B  C2 0018		  ret	24
+ 0000016E			ReadVal ENDP
 
 				; ------------------------------------------------------------
 				; name: WriteVal
 				;
 				; description: 
 				;
-				; preconditions: 
+				; preconditions: ebp+8 = offset of newInt, ebp+12 = offset of string2, ebp+16 = offset of string3
 				;
 				; postconditions: 
 				;
-				; receives: 
+				; receives: offset of a numeric SDOWRD value (newInt), offset of a string, offset of a string
 				;
 				; returns: 
 				; ---------------------------------------------------------------
- 00000137			WriteVal PROC
- 00000137  55			  push	EBP
- 00000138  8B EC		  mov	EBP, ESP
+ 0000016E			WriteVal PROC
+				  LOCAL	divide: DWORD, quotient: SDWORD, signFlag: DWORD		; signFlag 0 for positive, 1 for negative
+ 0000016E  55		   *	    push   ebp
+ 0000016F  8B EC	   *	    mov    ebp, esp
+ 00000171  83 C4 F4	   *	    add    esp, 0FFFFFFF4h
+ 00000174  C7 45 F4		  mov	signFlag, 0
+	   00000000
+ 0000017B  C7 45 FC		  mov	divide, 10
+	   0000000A
+ 00000182  8B 75 08		  mov	ESI, [EBP + 8]
+ 00000185  8B 7D 0C		  mov	EDI, [EBP + 12]
+ 00000188  8B 06		  mov	EAX, [ESI]
+ 0000018A  89 45 F8		  mov	quotient, EAX
+ 0000018D  B9 00000000		  mov	ECX, 0   ;will count the created string
+ 00000192  FC			  cld
+
+ 00000193			_saveSign:
+ 00000193  8B 06		  mov	EAX, [ESI]
+ 00000195  83 F8 00		  cmp	EAX, 0
+ 00000198  7D 07		  jge	_convertInt
+				;check if int is negative, set signFlag
+ 0000019A  C7 45 F4		  mov	signFlag, 1
+	   00000001
+
+ 000001A1			_convertInt:
+ 000001A1  8B 45 F8		  mov	EAX, quotient
+ 000001A4  99			  cdq
+ 000001A5  8B 5D FC		  mov	EBX, divide
+ 000001A8  F7 FB		  idiv	EBX
+				;save quotient for next division
+ 000001AA  89 45 F8		  mov	quotient, EAX
+				;check if remainder is negative and neg
+ 000001AD  8B C2		  mov	EAX, EDX
+ 000001AF  83 F8 00		  cmp	EAX, 0
+ 000001B2  7D 02		  jge	_toAscii
+ 000001B4  F7 D8		  neg	EAX
+				;convert remainder to ascii by adding 48
+ 000001B6			_toAscii:
+ 000001B6  83 C0 30		  add	EAX, 48
+				;add to list
+ 000001B9  AA			  STOSB
+ 000001BA  41			  inc	ECX
+				;check if quotient is zero (number is done), if not continue loop
+ 000001BB  8B 45 F8		  mov	EAX, quotient
+ 000001BE  83 F8 00		  cmp	EAX, 0
+ 000001C1  75 DE		  jne	_convertInt
+				;check if we need to add a negative sign
+ 000001C3  83 7D F4 01		  cmp	signFlag, 1
+ 000001C7  75 07		  jne	_reverseList
+ 000001C9  B8 0000002D		  mov	EAX, 45
+ 000001CE  AA			  STOSB
+ 000001CF  41			  inc	ECX
+
+ 000001D0			_reverseList:
+ 000001D0  8B 75 0C		  mov	ESI, [EBP + 12]	;newly created string
+ 000001D3  03 F1		  add	ESI, ECX	;start at end of string
+ 000001D5  4E			  dec	ESI
+ 000001D6  8B 7D 10		  mov	EDI, [EBP + 16] ;empty string for reverse
+
+ 000001D9			_revLOOP:
+ 000001D9  FD			  STD
+ 000001DA  AC			  LODSB
+ 000001DB  FC			  CLD
+ 000001DC  AA			  STOSB
+ 000001DD  E2 FA		  LOOP	_revLoop
 
 
- 0000013A  5D			  pop	EBP
- 0000013B  C3			  ret
- 0000013C			WriteVal ENDP
+
+				  
+ 000001DF  C9		   *	    leave  
+ 000001E0  C2 000C		  ret	12
+ 000001E3			WriteVal ENDP
 
 				END main
-Microsoft (R) Macro Assembler Version 14.29.30138.0	    03/09/22 23:00:11
+Microsoft (R) Macro Assembler Version 14.29.30138.0	    03/10/22 21:47:20
 5String Primitives and Macros     (Proj6_clarkeab.asm	     Symbols 2 - 1
 
 
@@ -420,8 +504,8 @@ Segments and Groups:
 
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
-_DATA  . . . . . . . . . . . . .	32 Bit	 000000A4 Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 0000013C Para	  Public  'CODE'	
+_DATA  . . . . . . . . . . . . .	32 Bit	 000000E4 Para	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 000001E3 Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
@@ -491,18 +575,18 @@ ReadInt  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 ReadKeyFlush . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 ReadKey  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 ReadString . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-ReadVal  . . . . . . . . . . . .	P Near	 0000003A _TEXT	Length= 000000FD Public STDCALL
+ReadVal  . . . . . . . . . . . .	P Near	 00000071 _TEXT	Length= 000000FD Public STDCALL
   signFlag . . . . . . . . . . .	DWord	 bp - 00000004
   multiply . . . . . . . . . . .	DWord	 bp - 00000008
-  _start_over  . . . . . . . . .	L Near	 00000074 _TEXT	
-  _start_loop  . . . . . . . . .	L Near	 0000009A _TEXT	
-  _continue  . . . . . . . . . .	L Near	 000000BD _TEXT	
-  _check_sign  . . . . . . . . .	L Near	 000000D2 _TEXT	
-  _check_pos . . . . . . . . . .	L Near	 000000E4 _TEXT	
-  _invalid . . . . . . . . . . .	L Near	 000000F1 _TEXT	
-  _switch_sign . . . . . . . . .	L Near	 0000011D _TEXT	
-  _edge_case . . . . . . . . . .	L Near	 0000012B _TEXT	
-  _done  . . . . . . . . . . . .	L Near	 0000012D _TEXT	
+  _start_over  . . . . . . . . .	L Near	 000000AB _TEXT	
+  _start_loop  . . . . . . . . .	L Near	 000000D1 _TEXT	
+  _continue  . . . . . . . . . .	L Near	 000000F4 _TEXT	
+  _check_sign  . . . . . . . . .	L Near	 00000109 _TEXT	
+  _check_pos . . . . . . . . . .	L Near	 0000011B _TEXT	
+  _invalid . . . . . . . . . . .	L Near	 00000128 _TEXT	
+  _switch_sign . . . . . . . . .	L Near	 00000154 _TEXT	
+  _edge_case . . . . . . . . . .	L Near	 00000162 _TEXT	
+  _done  . . . . . . . . . . . .	L Near	 00000164 _TEXT	
 SetConsoleCursorInfo . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 SetConsoleCursorPosition . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 SetConsoleMode . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
@@ -539,9 +623,17 @@ WriteStackFrameName  . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 WriteStackFrame  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteString  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteToFile  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-WriteVal . . . . . . . . . . . .	P Near	 00000137 _TEXT	Length= 00000005 Public STDCALL
+WriteVal . . . . . . . . . . . .	P Near	 0000016E _TEXT	Length= 00000075 Public STDCALL
+  divide . . . . . . . . . . . .	DWord	 bp - 00000004
+  quotient . . . . . . . . . . .	DWord	 bp - 00000008
+  signFlag . . . . . . . . . . .	DWord	 bp - 0000000C
+  _saveSign  . . . . . . . . . .	L Near	 00000193 _TEXT	
+  _convertInt  . . . . . . . . .	L Near	 000001A1 _TEXT	
+  _toAscii . . . . . . . . . . .	L Near	 000001B6 _TEXT	
+  _reverseList . . . . . . . . .	L Near	 000001D0 _TEXT	
+  _revLOOP . . . . . . . . . . .	L Near	 000001D9 _TEXT	
 WriteWindowsMsg  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 0000003A Public STDCALL
+main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000071 Public STDCALL
 printf . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 scanf  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 wsprintfA  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
@@ -764,7 +856,7 @@ black  . . . . . . . . . . . . .	Number	 00000000h
 blue . . . . . . . . . . . . . .	Number	 00000001h   
 brown  . . . . . . . . . . . . .	Number	 00000006h   
 cyan . . . . . . . . . . . . . .	Number	 00000003h   
-errorMsg . . . . . . . . . . . .	Byte	 0000004B _DATA	
+errorMsg . . . . . . . . . . . .	Byte	 0000008B _DATA	
 exit . . . . . . . . . . . . . .	Text   	 INVOKE ExitProcess,0
 gray . . . . . . . . . . . . . .	Number	 00000008h   
 green  . . . . . . . . . . . . .	Number	 00000002h   
@@ -775,12 +867,14 @@ lightGreen . . . . . . . . . . .	Number	 0000000Ah
 lightMagenta . . . . . . . . . .	Number	 0000000Dh   
 lightRed . . . . . . . . . . . .	Number	 0000000Ch   
 magenta  . . . . . . . . . . . .	Number	 00000005h   
-newInt . . . . . . . . . . . . .	DWord	 00000047 _DATA	
+newInt . . . . . . . . . . . . .	DWord	 00000087 _DATA	
 prompt1  . . . . . . . . . . . .	Byte	 00000000 _DATA	
 red  . . . . . . . . . . . . . .	Number	 00000004h   
-sLength  . . . . . . . . . . . .	DWord	 00000043 _DATA	
-sMax . . . . . . . . . . . . . .	DWord	 0000003F _DATA	
+sLength  . . . . . . . . . . . .	DWord	 00000083 _DATA	
+sMax . . . . . . . . . . . . . .	DWord	 0000007F _DATA	
 string1  . . . . . . . . . . . .	Byte	 0000001F _DATA	
+string2  . . . . . . . . . . . .	Byte	 0000003F _DATA	
+string3  . . . . . . . . . . . .	Byte	 0000005F _DATA	
 white  . . . . . . . . . . . . .	Number	 0000000Fh   
 wsprintf . . . . . . . . . . . .	Text   	 wsprintfA
 yellow . . . . . . . . . . . . .	Number	 0000000Eh   

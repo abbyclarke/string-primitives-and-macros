@@ -68,6 +68,8 @@ ENDM
 .data
 prompt1		BYTE	"Please enter a signed number: ", 0
 string1		BYTE	32 DUP(?)
+string2		BYTE	32 DUP(?)
+string3		BYTE	32 DUP(?)
 sMax		DWORD	32
 sLength		DWORD	?
 newInt		SDWORD	?
@@ -92,6 +94,18 @@ main PROC
   call	CrLf
   mov	EAX, newInt
   call	WriteInt
+  call	CrLf
+
+  push	OFFSET string3
+  push	OFFSET string2
+  push	OFFSET newInt
+  call	WriteVal
+  mov	EDX, OFFSET string2
+  call	WriteString
+  call	CrLf
+  mov	EDX, OFFSET string3
+  call	WriteString
+  call	CrLf
   
   
 
@@ -102,16 +116,18 @@ main ENDP
 ; ------------------------------------------------------------
 ; name: ReadVal
 
-; description: 
+; description: ReadVal uses mGetString maco to get user input in form of a string of digits. It converts the string of 
+; ascii digits to its numeric value representation in a SDOWRD. It validates the user's input is a valid number (no letters, symbols)
+; and ensures it fits in an SDWORD without overflow.
 ;
 ; preconditions: ebp+8 = Offset sLength, ebp+12 = sMax, ebp+16 = offset string1, ebp+20=offset prompt1, ebp+24=offset newInt,
 ; ebp+28= offset errorMsg
 ;
-; postconditions: 
+; postconditions: newInt value changed. registers preserved.
 ;
-; receives: 
+; receives: (listed above) offset sLength, sMax, offset string1, offset prompt1, offset newInt, offset errorMsg
 ;
-; returns: 
+; returns: converted value in SDWORD newInt
 ; ---------------------------------------------------------------
 ReadVal PROC
   LOCAL	signFlag: DWORD, multiply: DWORD			; signFlag: 0 for positive, 1 for negative
@@ -213,21 +229,78 @@ ReadVal ENDP
 ;
 ; description: 
 ;
-; preconditions: 
+; preconditions: ebp+8 = offset of newInt, ebp+12 = offset of string2, ebp+16 = offset of string3
 ;
 ; postconditions: 
 ;
-; receives: 
+; receives: offset of a numeric SDOWRD value (newInt), offset of a string, offset of a string
 ;
 ; returns: 
 ; ---------------------------------------------------------------
 WriteVal PROC
-  push	EBP
-  mov	EBP, ESP
+  LOCAL	divide: DWORD, quotient: SDWORD, signFlag: DWORD		; signFlag 0 for positive, 1 for negative
+  mov	signFlag, 0
+  mov	divide, 10
+  mov	ESI, [EBP + 8]
+  mov	EDI, [EBP + 12]
+  mov	EAX, [ESI]
+  mov	quotient, EAX
+  mov	ECX, 0   ;will count the created string
+  cld
+
+_saveSign:
+  mov	EAX, [ESI]
+  cmp	EAX, 0
+  jge	_convertInt
+;check if int is negative, set signFlag
+  mov	signFlag, 1
+
+_convertInt:
+  mov	EAX, quotient
+  cdq
+  mov	EBX, divide
+  idiv	EBX
+;save quotient for next division
+  mov	quotient, EAX
+;check if remainder is negative and neg
+  mov	EAX, EDX
+  cmp	EAX, 0
+  jge	_toAscii
+  neg	EAX
+;convert remainder to ascii by adding 48
+_toAscii:
+  add	EAX, 48
+;add to list
+  STOSB
+  inc	ECX
+;check if quotient is zero (number is done), if not continue loop
+  mov	EAX, quotient
+  cmp	EAX, 0
+  jne	_convertInt
+;check if we need to add a negative sign
+  cmp	signFlag, 1
+  jne	_reverseList
+  mov	EAX, 45
+  STOSB
+  inc	ECX
+
+_reverseList:
+  mov	ESI, [EBP + 12]	;newly created string
+  add	ESI, ECX	;start at end of string
+  dec	ESI
+  mov	EDI, [EBP + 16] ;empty string for reverse
+
+_revLOOP:
+  STD
+  LODSB
+  CLD
+  STOSB
+  LOOP	_revLoop
 
 
-  pop	EBP
-  ret
+
+  
+  ret	12
 WriteVal ENDP
 
 END main
