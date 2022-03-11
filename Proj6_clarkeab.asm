@@ -69,7 +69,6 @@ ENDM
 prompt1		BYTE	"Please enter a signed number: ", 0
 string1		BYTE	32 DUP(?)
 string2		BYTE	32 DUP(?)
-string3		BYTE	32 DUP(?)
 listNums	BYTE	32 DUP(?)
 sMax		DWORD	32
 sLength		DWORD	?
@@ -113,7 +112,6 @@ _get10Nums:
 _display10Nums:
   mov	EAX, [ESI]
   mov	newInt, EAX
-  push	OFFSET string3
   push	OFFSET string2
   push	newInt
   call	WriteVal
@@ -251,16 +249,16 @@ ReadVal ENDP
 ;
 ; description: 
 ;
-; preconditions: ebp+8 = value in listNums, ebp+12 = offset of string2, ebp+16 = offset of string3
+; preconditions: ebp+8 = value in listNums
 ;
 ; postconditions: 
 ;
-; receives: numeric SDOWRD value (listNums), offset of a string, offset of a string
+; receives: numeric SDWORD value (listNums)
 ;
 ; returns: 
 ; ---------------------------------------------------------------
 WriteVal PROC
-  LOCAL	divide: DWORD, quotient: SDWORD, signFlag: DWORD		; signFlag 0 for positive, 1 for negative
+  LOCAL	divide: DWORD, quotient: SDWORD, signFlag: DWORD 		; signFlag 0 for positive, 1 for negative
   push	EAX
   push	EBX
   push	ECX
@@ -272,9 +270,12 @@ WriteVal PROC
   mov	ESI, [EBP + 8]
   mov	EDI, [EBP + 12]
   mov	quotient, ESI
-  mov	ECX, 0   ;will count the created string
+  mov	ECX, 1   ;will count the created string
   cld
 
+
+  mov	EAX, 0
+  push	EAX
 _saveSign:
   mov	EAX, ESI
   cmp	EAX, 0
@@ -297,34 +298,29 @@ _convertInt:
 ;convert remainder to ascii by adding 48
 _toAscii:
   add	EAX, 48
-;add to list
-  STOSB
+  push	EAX			;save in register
   inc	ECX
 ;check if quotient is zero (number is done), if not continue loop
   mov	EAX, quotient
   cmp	EAX, 0
   jne	_convertInt
+
 ;check if we need to add a negative sign
   cmp	signFlag, 1
-  jne	_reverseList
+  jne	_popAscii
   mov	EAX, 45
   STOSB
-  inc	ECX
+  
 
-_reverseList:
-  mov	ESI, [EBP + 12]	;newly created string
-  add	ESI, ECX	;start at end of string
-  dec	ESI
-  mov	EDI, [EBP + 16] ;empty string for reverse
-
-_revLOOP:
-  STD
-  LODSB
-  CLD
+;add values to string list
+_popAscii:  
+  pop	EAX
   STOSB
-  LOOP	_revLoop
+  dec	ECX
+  cmp	ECX, 0
+  jg	_popAscii
 
-  mDisplayString	[EBP + 16]
+  mDisplayString	[EBP + 12]
 
   pop	ESI
   pop	EDI
@@ -332,7 +328,7 @@ _revLOOP:
   pop	ECX
   pop	EBX
   pop	EAX
-  ret	12
+  ret	4
 WriteVal ENDP
 
 END main
