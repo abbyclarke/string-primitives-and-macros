@@ -77,6 +77,8 @@ errorMsg	BYTE	"ERROR: You did not enter a signed number of your number was too b
 			BYTE	"Please try again: ", 0
 counter		DWORD	?
 yourNums	BYTE	"You entered the following numbers: ",13,10,0
+yourSum		BYTE	"The sum of these numbers is: ",0
+numSum		SDWORD	?
 
 
 
@@ -103,6 +105,8 @@ _get10Nums:
   cmp	counter, 0
   jg	_get10Nums
 
+
+
 ;display the integers  
   mov	EDX, OFFSET yourNums
   call	WriteString
@@ -121,8 +125,31 @@ _display10Nums:
   dec	counter
   cmp	counter, 0
   jg	_display10Nums
+  call	CrLf
 
 
+;calculate the sum
+  mov	ESI, OFFSET listNums
+  mov	EDI, OFFSET numSum
+  mov	counter, 4
+  mov	EAX, [ESI]
+_sumLoop:
+  add	ESI, 4
+  mov	EBX, [ESI]
+  add	EAX, EBX
+  dec	counter
+  cmp	counter, 0
+  jg	_sumLoop
+  mov	[EDI], EAX
+
+
+;display the sum
+  mov	EDX, OFFSET yourSum
+  call	WriteString
+  push	OFFSET string2
+  push	numSum
+  call	WriteVal
+  call	CrLf
 
   
   
@@ -171,7 +198,7 @@ _start_over:
   dec	ESI
   mov	EDI, [EBP + 24]
   mov	EAX, 0
-  mov	[EDI], EAX
+  mov	[EDI], EAX			;clear newInt 
   mov	EBX, multiply
 
 _start_loop:
@@ -249,7 +276,7 @@ ReadVal ENDP
 ;
 ; description: 
 ;
-; preconditions: ebp+8 = value in listNums
+; preconditions: ebp+8 = value in listNums, ebp+12 = string2
 ;
 ; postconditions: 
 ;
@@ -270,10 +297,10 @@ WriteVal PROC
   mov	ESI, [EBP + 8]
   mov	EDI, [EBP + 12]
   mov	quotient, ESI
-  mov	ECX, 1   ;will count the created string
+  mov	ECX, 1   ;will count the created string, starting at 1 to account for pushed 0 below
   cld
 
-
+;push a null byte so string will end after correct number of values stored
   mov	EAX, 0
   push	EAX
 _saveSign:
