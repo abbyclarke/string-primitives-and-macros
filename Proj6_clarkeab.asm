@@ -1,25 +1,27 @@
 TITLE String Primitives and Macros     (Proj6_clarkeab.asm)
 
 ; Author: Abby Clarke 
-; Last Modified: 3/7/2022
+; Last Modified: 3/11/2022
 ; OSU email address: clarkeab@oregonstate.edu
 ; Course number/section:   CS271 Section 02
 ; Project Number: 6                Due Date: 3/13/2022
-; Description: 
+; Description: This program gets 10 integers from user as strings, validates the integers based on size/characters, converts the string form to 
+; integer in SDWORD, and stores these integers in an array. Then the program calculates the sum and truncated average in main. To display the list
+; of numbers, sum, and average, the program calls a procedure to convert the integers to ascii string form so they can be displayed as strings.
 
 INCLUDE Irvine32.inc
 
-; (insert macro definitions here)
+
 ; -------------------------------------------------------------------
 ; Name: mGetString
 ;
-; Description:
+; Description: Displays a prompt to enter a signed number then gets user's input into a memory location. Records how many bytes are entered.
 ;
-; Preconditions:
+; Preconditions: prompt exists, string exists, length of string specified
 ;
 ; Receives: prompt (Offset of a prompt), userString (offset of empty string), size (length of string- input value), bytesRead (offset)
 ;
-; Returns:
+; Returns: filled string, number of bytes read in string
 ; -------------------------------------------------------------------
 mGetString	MACRO prompt, userString, size, bytesRead
   push	EAX
@@ -44,13 +46,13 @@ ENDM
 ; -------------------------------------------------------------------
 ; Name: mDisplayString
 ;
-; Description:
+; Description: Prints a given string.
 ;
-; Preconditions:
+; Preconditions: string exists.
 ;
 ; Receives: printString (Offset of string to be printed)
 ;
-; Returns:
+; Returns: Displays string.
 ; -------------------------------------------------------------------
 mDisplayString	MACRO	printString
   push	EAX
@@ -63,7 +65,7 @@ mDisplayString	MACRO	printString
   pop EAX
 ENDM
 
-; (insert constant definitions here)
+
 
 .data
 prompt1		BYTE	"Please enter a signed number: ", 0
@@ -81,14 +83,31 @@ yourSum		BYTE	"The sum of these numbers is: ",0
 yourAvg		BYTE	"The truncated average is: ",0
 numSum		SDWORD	?
 numAvg		SDWORD  ?
+titleinstr	BYTE	"Programming Assignment 6: String Primitives and Macros",13,10
+			BYTE	"Written by: Abby Clarke", 13,10,13,10
+			BYTE	"Please provide 10 signed decimal integers.",13,10
+			BYTE	"Each number needs to be small enough to fit inside a 32 bit register. After you have finished inputting ",13,10
+			BYTE	"the raw numbers I will display a list of the integers, their sum, and their average value.",13,10,13,10,0
+goodBye		BYTE	"Thanks for playing!",13,10,0
 
 
 
-; (insert variable definitions here)
 
 .code
 main PROC
+
+; -------------------------------------------------------------------------
+; Main procedure will introduce program, receieve 10 valid integers from user,
+; store integers in an array, calculate total sum and truncated average, and
+; display chosen integers/sum/average. Uses procedures ReadVal and WriteVal.
+; Does not use readInt, readDec, writeInt, writeDec.
+; -------------------------------------------------------------------------
   
+;title and instructions
+  mov	EDX, OFFSET titleinstr
+  call	WriteString
+
+;prompt user for 10 numbers  
   mov	counter, 10
   mov	EDI, OFFSET listNums
 _get10Nums:
@@ -106,7 +125,7 @@ _get10Nums:
   dec	counter
   cmp	counter, 0
   jg	_get10Nums
-
+  call	CrLf
 
 
 ;display the integers  
@@ -168,8 +187,11 @@ _sumLoop:
   push	numAvg
   call	WriteVal
   call	CrLf
-  
-  
+  call	CrLf
+
+;goodbye
+  mov	EDX, OFFSET goodBye
+  call	WriteString
 
 	Invoke ExitProcess,0	; exit to operating system
 main ENDP
@@ -199,6 +221,15 @@ ReadVal PROC
   push	EDX
   push	EDI
   push	ESI
+; ---------------------------------------------------------------- 
+; This procedure calls macro mGetString and prompts user to enter an integer.
+; The procedure verifies that the integer is within range (no overflow/carry) and
+; contains correct characters, then converts ascii characters to integers. It starts
+; with smallest digit by setting direction flag to go backwards, and multiplies by 1, 10,
+; 100, 1000, etc. and adds each new value to the SDWORD newInt. If number is invalid,
+; procedure does not store number and calls macro again with error message, prompting user
+; for new number.
+; ----------------------------------------------------------------
   mov	signFlag, 0
   mov	multiply, 1									; will increase by 10s
   mGetString	[EBP + 20], [EBP + 16], [EBP + 12], [EBP + 8]
@@ -289,15 +320,15 @@ ReadVal ENDP
 ; ------------------------------------------------------------
 ; name: WriteVal
 ;
-; description: 
+; description: Takes an integer value to convert to ASCII and a string to place it in. Displays the string.
 ;
 ; preconditions: ebp+8 = value in listNums, ebp+12 = string2
 ;
-; postconditions: 
+; postconditions: registers preserved. string is updated but will be overwritten in future calls.
 ;
 ; receives: numeric SDWORD value (listNums)
 ;
-; returns: 
+; returns: displays an integer in string (ascii) form
 ; ---------------------------------------------------------------
 WriteVal PROC
   LOCAL	divide: DWORD, quotient: SDWORD, signFlag: DWORD 		; signFlag 0 for positive, 1 for negative
@@ -307,6 +338,15 @@ WriteVal PROC
   push	EDX
   push	EDI
   push	ESI
+; ---------------------------------------------------------
+; WriteVal takes as parameters an integer value and a string to write
+; the converted number. Uses ECX to keep track of the number of values stored.
+; Pushes 0 first, then values in reverse order by dividing integer by 10 and 
+; pushing the converted ASCII remainder. Uses STOSB to then pop the ASCII
+; values off the stack in correct order, using ECX to know when to stop, ending
+; with null terminator 0. Calls macro mDisplayString to display the string.
+; ---------------------------------------------------------
+  
   mov	signFlag, 0
   mov	divide, 10
   mov	ESI, [EBP + 8]
@@ -370,7 +410,7 @@ _popAscii:
   pop	ECX
   pop	EBX
   pop	EAX
-  ret	4
+  ret	8
 WriteVal ENDP
 
 END main
