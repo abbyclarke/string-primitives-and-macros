@@ -70,12 +70,14 @@ prompt1		BYTE	"Please enter a signed number: ", 0
 string1		BYTE	32 DUP(?)
 string2		BYTE	32 DUP(?)
 string3		BYTE	32 DUP(?)
+listNums	BYTE	32 DUP(?)
 sMax		DWORD	32
 sLength		DWORD	?
 newInt		SDWORD	?
 errorMsg	BYTE	"ERROR: You did not enter a signed number of your number was too big.", 13,10
 			BYTE	"Please try again: ", 0
-
+counter		DWORD	?
+yourNums	BYTE	"You entered the following numbers: ",13,10,0
 
 
 
@@ -84,6 +86,9 @@ errorMsg	BYTE	"ERROR: You did not enter a signed number of your number was too b
 .code
 main PROC
   
+  mov	counter, 4
+  mov	EDI, OFFSET listNums
+_get10Nums:
   push	OFFSET errorMsg
   push	OFFSET newInt
   push	OFFSET prompt1
@@ -91,21 +96,38 @@ main PROC
   push	sMax
   push	OFFSET sLength
   call	ReadVal
-  call	CrLf
+;add integer to list of 10 integers from user
   mov	EAX, newInt
-  call	WriteInt
-  call	CrLf
+  mov	[EDI], EAX
+  add	EDI, 4
+  dec	counter
+  cmp	counter, 0
+  jg	_get10Nums
 
+;display the integers  
+  mov	EDX, OFFSET yourNums
+  call	WriteString
+;convert each int in listNums to ascii string
+  mov	ESI, OFFSET listNums
+  mov	counter, 4
+_display10Nums:
+  mov	EAX, [ESI]
+  mov	newInt, EAX
   push	OFFSET string3
   push	OFFSET string2
-  push	OFFSET newInt
+  push	newInt
   call	WriteVal
-  mov	EDX, OFFSET string2
-  call	WriteString
-  call	CrLf
-  mov	EDX, OFFSET string3
-  call	WriteString
-  call	CrLf
+  mov	AL, 32
+  call	WriteChar
+  add	ESI, 4
+  dec	counter
+  cmp	counter, 0
+  jg	_display10Nums
+
+
+
+  
+  
   
   
 
@@ -229,27 +251,32 @@ ReadVal ENDP
 ;
 ; description: 
 ;
-; preconditions: ebp+8 = offset of newInt, ebp+12 = offset of string2, ebp+16 = offset of string3
+; preconditions: ebp+8 = value in listNums, ebp+12 = offset of string2, ebp+16 = offset of string3
 ;
 ; postconditions: 
 ;
-; receives: offset of a numeric SDOWRD value (newInt), offset of a string, offset of a string
+; receives: numeric SDOWRD value (listNums), offset of a string, offset of a string
 ;
 ; returns: 
 ; ---------------------------------------------------------------
 WriteVal PROC
   LOCAL	divide: DWORD, quotient: SDWORD, signFlag: DWORD		; signFlag 0 for positive, 1 for negative
+  push	EAX
+  push	EBX
+  push	ECX
+  push	EDX
+  push	EDI
+  push	ESI
   mov	signFlag, 0
   mov	divide, 10
   mov	ESI, [EBP + 8]
   mov	EDI, [EBP + 12]
-  mov	EAX, [ESI]
-  mov	quotient, EAX
+  mov	quotient, ESI
   mov	ECX, 0   ;will count the created string
   cld
 
 _saveSign:
-  mov	EAX, [ESI]
+  mov	EAX, ESI
   cmp	EAX, 0
   jge	_convertInt
 ;check if int is negative, set signFlag
@@ -297,9 +324,14 @@ _revLOOP:
   STOSB
   LOOP	_revLoop
 
+  mDisplayString	[EBP + 16]
 
-
-  
+  pop	ESI
+  pop	EDI
+  pop	EDX
+  pop	ECX
+  pop	EBX
+  pop	EAX
   ret	12
 WriteVal ENDP
 
